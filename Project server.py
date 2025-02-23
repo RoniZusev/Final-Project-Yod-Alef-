@@ -1,59 +1,51 @@
-
-import time
 import socket
 from threading import Thread
-import sqlite3
 
+# Configuration
 MaxConnections = 20
 Listening_port = 1729
 
-Server_Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Server socket (UDP)
+Server_Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 Server_Socket.bind(("0.0.0.0", Listening_port))
 
 clients = []
 
-def broadcast(massage, sender):
+def broadcast(message, sender_addr):
+    """Broadcast a message to all clients except the sender."""
     for client in clients:
-        if client!= sender:
-            client.send(massage.encode())
+        if client != sender_addr:
+            Server_Socket.sendto(message.encode(), client)
 
-def handle_client(client, addrss):
-    print(f'{addrss} connected.')
-    clients.append(client)
-    try:
-        while True:
-            message = client.recv(1024).decode()
-            if not message:
-                break
-            print(f'[request from {addrss}] {message}')
-            back_request = "\nthe answer is hello: " + message
-            client.send(back_request.encode())
-            broadcast(f'{addrss} {message}', sender=client)
-    except Exception as e:
-        print(f'{e}')
-    finally:
-        print(f'{addrss} disconnected')
-        clients.remove(client)
-        client.close()
+def handle_client():
+    """Handles incoming messages from clients."""
+    print(f'Server listening on port {Listening_port}')
 
-def wait_for_connection():
     while True:
         try:
-            print('waiting for connections...')
-            client, addr = Server_Socket.accept()
-            Thread(target=handle_client, args=(client, addr)).start()
+            # Receive message from any client
+            message, client_addr = Server_Socket.recvfrom(1024)
+            message = message.decode()
+
+            if client_addr not in clients:
+                clients.append(client_addr)
+                print(f'{client_addr} added to clients list.')
+
+            if not message:
+                continue  # Skip empty messages
+
+            print(f'[request from {client_addr}] {message}')
+            response = "\nthe answer is hello: " + message
+            Server_Socket.sendto(response.encode(), client_addr)  # Send response to client
+
+            # Broadcast message to all clients except the sender
+            broadcast(f'{client_addr} {message}', sender_addr=client_addr)
         except Exception as e:
-            print(e)
+            print(f'Error: {e}')
             break
-    print('server shutdown.')
+
+    print('Server shutdown.')
 
 if __name__ == "__main__":
-    Server_Socket.listen(MaxConnections)
-    print(f'server is listening on port {Listening_port}')
-    accept_thread = Thread(target=wait_for_connection())
-    accept_thread.start()
-    accept_thread.join()
-    Server_Socket.close()
-
-
-
+    print(f'Server is listening on port {Listening_port}')
+    Thread(target=handle_client).start()  # Start the main message handling

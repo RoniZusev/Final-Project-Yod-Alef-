@@ -1,3 +1,4 @@
+import game_stage_blue
 import socket
 import pygame
 import cv2
@@ -19,16 +20,24 @@ def receive_messages():
             message = message.decode().strip()
             print(f"Server: {message}")
 
-            if message == "the answer is hello: ENTER_PRESSED":
+            if message == "!ENTER_PRESSED":
                 print("Server acknowledged ENTER key press. Switching screen...")
                 return Login_To_Game()  # Call Login_To_Game properly
+
+            if message == "success":
+                print("success")
+                if __name__ == '__main__':
+                    game_stage_blue.game_blue()
+
+            if message == "failed":
+                print("failed")
+                return Login_To_Game()
 
         except Exception as e:
             print(f'⚠ Connection error: {e}')
             break
 
-def start_client():
-
+def start_background():
     try:
         print(f'✅ Client ready to communicate with {server_ip}:{server_port}')
 
@@ -52,8 +61,8 @@ def start_client():
         font = pygame.font.SysFont("Times New Roman", 45)
         text = font.render("Press Enter to start", True, (0, 0, 0))
 
-        font2 = font = pygame.font.SysFont("Times New Roman", 20)
-        text_by = font.render("Roni Zusev", True, (0, 0, 0))
+        font2 = font = pygame.font.SysFont("Times New Roman", 20, bold= True)
+        text_by = font.render("Roni Zusev", True, (0, 0, 0), )
 
         clock = pygame.time.Clock()
         running = True
@@ -79,12 +88,25 @@ def start_client():
             # Draw video frame as background
             screen.blit(frame, (0, 0))
 
-            # Draw text
+            # Create a rectangle for the text box effect
             text_rect = text.get_rect(center=(screen_width // 2, screen_height // 2 + 190))
+            box_padding = 5  # Padding inside the box
+            box_width = text_rect.width + 2 * box_padding  # Adjust box width to fit text
+            box_height = text_rect.height + 2 * box_padding  # Adjust box height to fit text
+
+            # Draw the background box (light gray background)
+            pygame.draw.rect(screen, (200, 200, 200),
+                             (text_rect.x - box_padding, text_rect.y - box_padding, box_width, box_height))
+            # Draw the border of the box
+            pygame.draw.rect(screen, (0, 0, 0),
+                             (text_rect.x - box_padding, text_rect.y - box_padding, box_width, box_height), 3)
+
+            # Draw text on top of the box
             screen.blit(text, text_rect)
 
-            text_by_rect = text_by.get_rect(center=(screen_width // 2 - 330, screen_height // 2 -240))
-            screen.blit(text_by,text_by_rect)
+            # Draw the "By" text
+            text_by_rect = text_by.get_rect(center=(screen_width // 2 - 330, screen_height // 2 - 240))
+            screen.blit(text_by, text_by_rect)
 
             pygame.display.update()
             clock.tick(30)
@@ -112,27 +134,13 @@ def start_client():
         client.close()
         print('🔌 Client disconnected')
 
+
 import pygame
 import pygame.freetype  # For font rendering and text input
 
 def Login_To_Game():
     """Transition to the game screen while keeping Pygame running."""
     print("🔄 Switching to game login screen...")
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    # יצירת טבלה אם היא לא קיימת
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
-        password TEXT
-    )
-    """)
-    conn.commit()
-
-    # הוספת משתמש לדוגמה (שם משתמש: admin, סיסמה: 1234)
-    cursor.execute("INSERT OR IGNORE INTO users (username, password) VALUES ('admin', '1234')")
-    conn.commit()
 
     pygame.quit()  # Quit previous session
     pygame.init()  # Restart Pygame
@@ -145,7 +153,7 @@ def Login_To_Game():
 
     # Set up the background color and font
     screen.fill((0, 0, 0))  # Black background
-    font = pygame.font.SysFont("Arial", 40)
+    font = pygame.font.SysFont("Times New Roman", 40)
     text = font.render("Game Screen - Login", True, (255, 255, 255))  # White text
     text_rect = text.get_rect(center=(screen_width // 2, screen_height / 4 + 35))
     screen.blit(text, text_rect)
@@ -174,6 +182,19 @@ def Login_To_Game():
                 print("🛑 Closing game screen...")
                 running = False
 
+            if event.type == pygame.KEYDOWN:
+                if active_input == 'username':
+                    if event.key == pygame.K_BACKSPACE:
+                        username = username[:-1]
+                    else:  # <-- Correct indentation here
+                        username += event.unicode
+
+                elif active_input == 'password':
+                    if event.key == pygame.K_BACKSPACE:
+                        password = password[:-1]
+                    else:
+                        password += event.unicode
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 # Check if the mouse is clicked inside the input boxes or button
                 if username_box.collidepoint(event.pos):
@@ -182,26 +203,8 @@ def Login_To_Game():
                     active_input = 'password'
                 elif connect_button.collidepoint(event.pos):
                     print(f"Attempting to connect with username: {username} and password: {password}")
-                    cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
-                    result = cursor.fetchone()
-                    conn.close()
-
-                    if result:
-                        print("success")
-                    else:
-                        running = False
-            if event.type == pygame.KEYDOWN:
-                if active_input == 'username':
-                    if event.key == pygame.K_BACKSPACE:
-                        username = username[:-1]
-                    else:
-                        username += event.unicode
-
-                elif active_input == 'password':
-                    if event.key == pygame.K_BACKSPACE:
-                        password = password[:-1]
-                    else:
-                        password += event.unicode
+                    client.sendto(f"ATTEMPT: {username} , {password}".encode(), (server_ip, server_port))  # UDP send
+                    receive_messages()
 
         # Redraw the screen
         screen.fill((0, 0, 0))  # Clear screen
@@ -214,7 +217,7 @@ def Login_To_Game():
         pygame.draw.rect(screen, (255, 255, 255), password_box, 2)  # White border for password box
         pygame.draw.rect(screen, (255, 255, 255), connect_button)  # White border for connect button
 
-        small_font = pygame.font.SysFont("Arial", 25)
+        small_font = pygame.font.SysFont("Times New Roman", 25)
         username_text = small_font.render(username, True, (255, 255, 255))  # White text
         password_text = font.render('*' * len(password), True, (255, 255, 255))  # Mask password with asterisks
 
@@ -228,10 +231,10 @@ def Login_To_Game():
                                    connect_button.y + (connect_button.height - connect_text.get_height()) // 2))
 
         pygame.display.update()
-    cursor.close()
     pygame.quit()
 
 
 
 if __name__ == '__main__':
-    start_client()
+
+    start_background()

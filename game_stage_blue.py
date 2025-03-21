@@ -1,36 +1,37 @@
 import pygame
-import socket
+
 
 def game_blue():
     pygame.init()
 
-    # Get screen information and set screen size
+    # Screen setup
     screen_width, screen_height = 960, 540
     screen = pygame.display.set_mode((screen_width, screen_height))
     pygame.display.set_caption("Game Screen")
 
-    # Load background image
-    background = pygame.image.load("game_background.jpg")  # Change to your image file
-    background = pygame.transform.scale(background, (screen_width, screen_height))  # Resize to fit screen
+    # Load images
+    background = pygame.image.load("game_background.jpg")
+    background = pygame.transform.scale(background, (screen_width, screen_height))
 
-    # Load font and text
-    font = pygame.font.SysFont("Times New Roman", 60, bold= True)
-    text = font.render("GAME", True, (0, 0, 0))
-    text_rect = text.get_rect(center=(screen_width // 2, 50))
+    player_image = pygame.image.load("Red_player-removebg-preview.png")
+    player_width, player_height = 130, 140
+    player_image = pygame.transform.scale(player_image, (player_width, player_height))
 
-    ground_height = 50  # Height of the ground
-    ground_color =  (0, 0, 0)  # Brown color for the ground (like dirt)
+    # Ground setup
+    ground_height = 50
+    ground_color = (57, 46, 46)
 
-    # Blue Player settings
-    player_width, player_height = 50, 50  # Player size
-    player_x, player_y = screen_width // 2, screen_height // 2  # Start at center
-    player_speed = 1  # Movement speed
+    # Player setup
+    player_x, player_y = 80, screen_height - ground_height - player_height
+    player_speed = 1
+    velocity_y = 0  # Vertical velocity
+    gravity = 0.5  # Gravity strength
+    jump_power = -5  # Jump strength
+    on_ground = True  # Track if player is on the ground
 
     running = True
     while running:
-        screen.blit(background, (0, 0))  # Draw background
-        screen.blit(text, text_rect)  # Draw "GAME" text
-
+        screen.blit(background, (0, 0))
         pygame.draw.rect(screen, ground_color, (0, screen_height - ground_height, screen_width, ground_height))
 
         # Handle player movement
@@ -39,13 +40,22 @@ def game_blue():
             player_x -= player_speed
         if keys[pygame.K_RIGHT] and player_x < screen_width - player_width:
             player_x += player_speed
-        if keys[pygame.K_UP] and player_y > 0:
-            player_y -= player_speed
-        if keys[pygame.K_DOWN] and player_y < screen_height - ground_height:
-            player_y += player_speed
+        if keys[pygame.K_UP] and on_ground:  # Jump only if on the ground
+            velocity_y = jump_power
+            on_ground = False
 
-        # Draw blue player
-        pygame.draw.rect(screen, (0, 0, 255), (player_x, player_y, player_width, player_height))
+        # Apply gravity
+        velocity_y += gravity
+        player_y += velocity_y
+
+        # Check if player hits the ground
+        if player_y >= screen_height - ground_height - player_height:
+            player_y = screen_height - ground_height - player_height
+            velocity_y = 0
+            on_ground = True
+
+        # Draw player
+        screen.blit(player_image, (player_x, player_y))
 
         pygame.display.update()
 
@@ -54,6 +64,7 @@ def game_blue():
                 running = False
 
     pygame.quit()
+
 
 if __name__ == "__main__":
     game_blue()

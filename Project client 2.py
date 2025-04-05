@@ -1,9 +1,11 @@
-import game_stage_blue
+import game_stage_red
 import socket
 import pygame
 import cv2
 from threading import Thread
 import sqlite3
+
+import game_stage_red
 
 # Client configurations
 server_ip = '127.0.0.1'
@@ -27,7 +29,7 @@ def receive_messages():
             if message == "success":
                 print("success")
                 if __name__ == '__main__':
-                    game_stage_blue.game_blue()
+                    game_stage_red.game_red()
 
             if message == "failed":
                 print("failed")

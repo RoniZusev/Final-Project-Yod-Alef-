@@ -6,19 +6,20 @@ import pickle
 MaxConnections = 20
 Listening_port = 1729
 
+
+# Initialize database with some default users
 def initialize_database():
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect("users.db", check_same_thread=False)
     cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            username TEXT PRIMARY KEY,
-            password TEXT
-        )
-    """)
+    cursor.execute("""CREATE TABLE IF NOT EXISTS users (
+        username TEXT PRIMARY KEY,
+        password TEXT
+    )""")
     conn.commit()
     cursor.execute("INSERT OR IGNORE INTO users (username, password) VALUES ('RONI', '1234')")
     conn.commit()
     conn.close()
+
 
 initialize_database()
 
@@ -27,6 +28,8 @@ Server_Socket.bind(("0.0.0.0", Listening_port))
 
 clients = {}
 
+
+# Broadcast player positions to all clients
 def broadcast_positions():
     """Broadcast all player positions to all clients."""
     if not clients:
@@ -45,12 +48,15 @@ def broadcast_positions():
     except Exception as e:
         print(f"Broadcast error: {e}")
 
+
+# Handle client requests
 def handle_client():
     print(f"Server listening on port {Listening_port}")
 
     while True:
         try:
-            conn = sqlite3.connect("users.db")
+            # Create a new database connection for each client
+            conn = sqlite3.connect("users.db", check_same_thread=False)
             cursor = conn.cursor()
 
             message, client_addr = Server_Socket.recvfrom(1024)
@@ -106,6 +112,7 @@ def handle_client():
             break
 
     print('Server shutdown.')
+
 
 if __name__ == "__main__":
     print(f"Server is starting on port {Listening_port}...")
